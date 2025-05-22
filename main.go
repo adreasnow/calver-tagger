@@ -91,6 +91,10 @@ func getTags(repo *git.Repository) (out []*tag, err error) {
 	}
 
 	err = tagIter.ForEach(func(tagOB *plumbing.Reference) error {
+		if tagOB.Name().Short()[0] != 'v' {
+			return nil
+		}
+
 		tags = append(tags, &tag{
 			from:    tagOB.Name().Short(),
 			tag:     tagOB,
@@ -103,6 +107,8 @@ func getTags(repo *git.Repository) (out []*tag, err error) {
 		err = fmt.Errorf("error iterating over tags: %w ", err)
 		return
 	}
+
+	processed := []*tag{}
 
 	for _, tag := range tags {
 		tag.commit, err = repo.CommitObject(tag.tag.Hash())
@@ -126,9 +132,11 @@ func getTags(repo *git.Repository) (out []*tag, err error) {
 		year := commitTime.Year()
 		month := int(commitTime.Month())
 		tag.to = fmt.Sprintf("v%d.%d", year, month)
+
+		processed = append(processed, tag)
 	}
 
-	tagged := calculateTagRevision(tags)
+	tagged := calculateTagRevision(processed)
 	out = sortTagsByDate(tagged)
 
 	return
